@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import {
   StyleSheet,
   TextInput,
@@ -6,27 +6,20 @@ import {
   Platform,
   ActivityIndicator,
 } from 'react-native';
-import { Link, router } from 'expo-router';
+import { Link } from 'expo-router';
 
 import { CustomButton } from '@/src/components/CustomButton';
-import { signIn } from '@/src/services/supabase';
-import { useAuth } from '@/src/hooks/useAuth';
+import { sendPasswordResetEmail } from '@/src/services/supabase';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
-export default function LoginScreen() {
+export default function ForgotPasswordScreen() {
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const { isAuthenticated, loading: authLoading } = useAuth();
-
-  useEffect(() => {
-    if (authLoading) return;
-    if (isAuthenticated) router.replace('/(tabs)');
-  }, [authLoading, isAuthenticated]);
+  const [success, setSuccess] = useState(false);
 
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
@@ -34,25 +27,42 @@ export default function LoginScreen() {
   const inputText = Colors[colorScheme ?? 'light'].text;
   const placeholderColor = isDark ? '#9BA1A6' : '#687076';
 
-  async function handleLogin() {
+  async function handleSendReset() {
     setError(null);
     const trimmedEmail = email.trim();
-    if (!trimmedEmail || !password) {
-      setError('E-posta ve şifre gerekli.');
+    if (!trimmedEmail) {
+      setError('E-posta adresi gerekli.');
       return;
     }
     setLoading(true);
-    const { data, error: signInError } = await signIn(trimmedEmail, password);
+    const { error: resetError } = await sendPasswordResetEmail(trimmedEmail);
     setLoading(false);
 
-    if (signInError) {
-      setError(signInError.message ?? 'Giriş yapılamadı.');
+    if (resetError) {
+      setError(resetError.message ?? 'Şifre sıfırlama e-postası gönderilemedi.');
       return;
     }
 
-    if (data?.session) {
-      router.replace('/(tabs)');
-    }
+    setSuccess(true);
+  }
+
+  if (success) {
+    return (
+      <ThemedView style={styles.container}>
+        <ThemedText type="title" style={styles.title}>
+          E-posta gönderildi
+        </ThemedText>
+        <ThemedText style={styles.successText} lightColor="#0a7ea4" darkColor="#6eb8e0">
+          Şifre sıfırlama linki {email.trim()} adresine gönderildi. Gelen kutunuzu (ve spam
+          klasörünü) kontrol edin. Linke tıklayıp yeni şifrenizi belirleyebilirsiniz.
+        </ThemedText>
+        <Link href="/(auth)/login" asChild>
+          <ThemedText type="link" style={styles.link}>
+            Giriş sayfasına dön
+          </ThemedText>
+        </Link>
+      </ThemedView>
+    );
   }
 
   return (
@@ -61,7 +71,10 @@ export default function LoginScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboard}>
         <ThemedText type="title" style={styles.title}>
-          Giriş Yap
+          Şifremi unuttum
+        </ThemedText>
+        <ThemedText style={styles.hint}>
+          Kayıtlı e-posta adresinizi girin. Size şifre sıfırlama linki göndereceğiz.
         </ThemedText>
 
         <TextInput
@@ -79,19 +92,6 @@ export default function LoginScreen() {
           editable={!loading}
         />
 
-        <TextInput
-          style={[styles.input, { backgroundColor: inputBg, color: inputText }]}
-          placeholder="Şifre"
-          placeholderTextColor={placeholderColor}
-          value={password}
-          onChangeText={(text) => {
-            setPassword(text);
-            setError(null);
-          }}
-          secureTextEntry
-          editable={!loading}
-        />
-
         {error ? (
           <ThemedText style={styles.error} lightColor="#c00" darkColor="#f66">
             {error}
@@ -99,23 +99,17 @@ export default function LoginScreen() {
         ) : null}
 
         <CustomButton
-          title={loading ? 'Giriş yapılıyor...' : 'Giriş Yap'}
-          onPress={handleLogin}
+          title={loading ? 'Gönderiliyor...' : 'Sıfırlama linki gönder'}
+          onPress={handleSendReset}
           disabled={loading}
           style={styles.button}
         />
 
         {loading && <ActivityIndicator style={styles.loader} color="#0a7ea4" />}
 
-        <Link href="/(auth)/forgot-password" asChild>
-          <ThemedText type="link" style={styles.forgotLink}>
-            Şifremi unuttum
-          </ThemedText>
-        </Link>
-
-        <Link href="/(auth)/register" asChild>
+        <Link href="/(auth)/login" asChild>
           <ThemedText type="link" style={styles.link}>
-            Hesabın yok mu? Kayıt ol
+            Giriş sayfasına dön
           </ThemedText>
         </Link>
       </KeyboardAvoidingView>
@@ -135,7 +129,13 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
   },
   title: {
-    marginBottom: 24,
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  hint: {
+    fontSize: 14,
+    opacity: 0.85,
+    marginBottom: 20,
     textAlign: 'center',
   },
   input: {
@@ -149,15 +149,16 @@ const styles = StyleSheet.create({
     fontSize: 14,
     marginBottom: 12,
   },
+  successText: {
+    fontSize: 14,
+    marginBottom: 24,
+    textAlign: 'center',
+  },
   button: {
     marginTop: 8,
   },
   loader: {
     marginTop: 12,
-  },
-  forgotLink: {
-    marginTop: 16,
-    textAlign: 'center',
   },
   link: {
     marginTop: 24,
