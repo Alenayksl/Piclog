@@ -1,14 +1,16 @@
+import { useLocalSearchParams } from 'expo-router';
 import { StyleSheet } from 'react-native';
 
-import { LogCard } from '@/src/components/LogCard';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 
-export default function FeedScreen() {
+export default function DetailScreen() {
+  const { id } = useLocalSearchParams<{ id: string }>();
+
   return (
     <ThemedView style={styles.container}>
-      <ThemedText type="title">Akış</ThemedText>
-      {/* TODO: Log listesi buraya gelecek */}
+      <ThemedText type="title">Anı #{id}</ThemedText>
+      {/* TODO: Anı detayı buraya gelecek */}
     </ThemedView>
   );
 }
