@@ -20,6 +20,28 @@ export default function SettingsScreen() {
   const insets = useSafeAreaInsets();
   const styles = getStyles(theme);
 
+  const renderLangPixel = (langCode: "tr" | "en") => {
+    if (langCode === "tr") {
+      return (
+        <View style={[styles.pixelFlag, styles.flagRed]}>
+          <View style={styles.flagDot} />
+          <View style={styles.flagDotInner} />
+        </View>
+      );
+    }
+
+    return (
+      <View style={styles.pixelFlag}>
+        <View style={[styles.flagRow, styles.flagRed]} />
+        <View style={[styles.flagRow, styles.flagWhite]} />
+        <View style={[styles.flagRow, styles.flagRed]} />
+        <View style={[styles.flagRow, styles.flagWhite]} />
+        <View style={[styles.flagRow, styles.flagRed]} />
+        <View style={styles.flagBlueCorner} />
+      </View>
+    );
+  };
+
   async function handleLogout() {
     setLoggingOut(true);
     const { error } = await signOut();
@@ -87,7 +109,7 @@ export default function SettingsScreen() {
             language === "tr" && styles.langButtonActive,
           ]}
         >
-          <ThemedText style={styles.langFlag}>▦TR</ThemedText>
+          {renderLangPixel("tr")}
         </Pressable>
         <Pressable
           onPress={() => setLanguage("en")}
@@ -96,7 +118,7 @@ export default function SettingsScreen() {
             language === "en" && styles.langButtonActive,
           ]}
         >
-          <ThemedText style={styles.langFlag}>▦EN</ThemedText>
+          {renderLangPixel("en")}
         </Pressable>
       </View>
 
@@ -187,11 +209,50 @@ function getStyles(theme: PixelTheme) {
       backgroundColor: theme.iconFrameFocused,
       borderColor: theme.pixelDot,
     },
-    langFlag: {
-      fontFamily: Fonts?.mono,
-      fontSize: 11,
-      color: theme.title,
-      letterSpacing: 0.6,
+    pixelFlag: {
+      width: 22,
+      height: 14,
+      borderWidth: 1,
+      borderColor: theme.panelBorder,
+      backgroundColor: theme.iconInner,
+      overflow: "hidden",
+      position: "relative",
+    },
+    flagRow: {
+      height: 2.8,
+      width: "100%",
+    },
+    flagRed: {
+      backgroundColor: "#d64663",
+    },
+    flagWhite: {
+      backgroundColor: "#fff6f8",
+    },
+    flagBlueCorner: {
+      position: "absolute",
+      top: 0,
+      left: 0,
+      width: 9,
+      height: 7,
+      backgroundColor: "#344e9a",
+    },
+    flagDot: {
+      position: "absolute",
+      top: 4,
+      left: 7,
+      width: 5,
+      height: 5,
+      borderRadius: 3,
+      backgroundColor: "#fff6f8",
+    },
+    flagDotInner: {
+      position: "absolute",
+      top: 4,
+      left: 9,
+      width: 5,
+      height: 5,
+      borderRadius: 3,
+      backgroundColor: "#d64663",
     },
     panel: {
       width: "100%",
