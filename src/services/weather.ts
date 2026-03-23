@@ -8,9 +8,12 @@ export interface WeatherData {
   icon: string;
 }
 
+type SupportedLanguage = "tr" | "en";
+
 export async function getWeather(
   lat: number,
   lon: number,
+  language: SupportedLanguage = "tr",
 ): Promise<WeatherData | null> {
   if (!OPENWEATHER_API_KEY) {
     console.warn("OpenWeatherMap API key not configured");
@@ -19,7 +22,7 @@ export async function getWeather(
 
   try {
     const res = await fetch(
-      `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=${OPENWEATHER_API_KEY}&units=metric&lang=tr`,
+      `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=${OPENWEATHER_API_KEY}&units=metric&lang=${language}`,
     );
     const data = await res.json();
     const code = Number(data?.cod ?? res.status);

@@ -13,8 +13,9 @@ const reverseGeocodeCache = new Map<string, AddressResult | null>();
 export async function reverseGeocode(
   lat: number,
   lon: number,
+  language: "tr" | "en" = "tr",
 ): Promise<AddressResult | null> {
-  const cacheKey = `${lat.toFixed(4)},${lon.toFixed(4)}`;
+  const cacheKey = `${lat.toFixed(4)},${lon.toFixed(4)},${language}`;
   if (reverseGeocodeCache.has(cacheKey)) {
     return reverseGeocodeCache.get(cacheKey) ?? null;
   }
@@ -24,7 +25,7 @@ export async function reverseGeocode(
     const res = await fetch(url, {
       headers: {
         Accept: "application/json",
-        "Accept-Language": "tr,en;q=0.8",
+        "Accept-Language": language === "tr" ? "tr,en;q=0.8" : "en,tr;q=0.8",
       },
     });
 
@@ -50,7 +51,12 @@ export async function reverseGeocode(
 
     const { city, town, village, municipality, state, country } = data.address;
     const cityName =
-      city ?? town ?? village ?? municipality ?? state ?? "Bilinmeyen";
+      city ??
+      town ??
+      village ??
+      municipality ??
+      state ??
+      (language === "tr" ? "Bilinmeyen" : "Unknown");
 
     const result = {
       city: cityName,

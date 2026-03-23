@@ -1,63 +1,65 @@
-import { useState, useEffect } from 'react';
+import { Link, router } from "expo-router";
+import { useEffect, useState } from "react";
 import {
-  StyleSheet,
-  TextInput,
-  KeyboardAvoidingView,
-  Platform,
-  ActivityIndicator,
-} from 'react-native';
-import { Link, router } from 'expo-router';
+    ActivityIndicator,
+    KeyboardAvoidingView,
+    Platform,
+    StyleSheet,
+    TextInput,
+} from "react-native";
 
-import { CustomButton } from '@/src/components/CustomButton';
-import { signUp, resendConfirmationEmail } from '@/src/services/supabase';
-import { useAuth } from '@/src/hooks/useAuth';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Colors } from '@/constants/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
+import { ThemedText } from "@/components/themed-text";
+import { ThemedView } from "@/components/themed-view";
+import { Colors } from "@/constants/theme";
+import { useColorScheme } from "@/hooks/use-color-scheme";
+import { CustomButton } from "@/src/components/CustomButton";
+import { useAuth } from "@/src/hooks/useAuth";
+import { useI18n } from "@/src/i18n/app-i18n";
+import { resendConfirmationEmail, signUp } from "@/src/services/supabase";
 
 export default function RegisterScreen() {
-  const [fullName, setFullName] = useState('');
-  const [username, setUsername] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [fullName, setFullName] = useState("");
+  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [resendLoading, setResendLoading] = useState(false);
   const { isAuthenticated, loading: authLoading } = useAuth();
+  const { t } = useI18n();
 
   useEffect(() => {
     if (authLoading) return;
-    if (isAuthenticated) router.replace('/(tabs)');
+    if (isAuthenticated) router.replace("/(tabs)");
   }, [authLoading, isAuthenticated]);
 
   const colorScheme = useColorScheme();
-  const isDark = colorScheme === 'dark';
-  const inputBg = isDark ? '#25282a' : '#f0f0f0';
-  const inputText = Colors[colorScheme ?? 'light'].text;
-  const placeholderColor = isDark ? '#9BA1A6' : '#687076';
+  const isDark = colorScheme === "dark";
+  const inputBg = isDark ? "#25282a" : "#f0f0f0";
+  const inputText = Colors[colorScheme ?? "light"].text;
+  const placeholderColor = isDark ? "#9BA1A6" : "#687076";
 
   async function handleRegister() {
     setError(null);
     setSuccessMessage(null);
     const trimmedFullName = fullName.trim();
-    const trimmedUsername = username.trim().replace(/\s+/g, '');
+    const trimmedUsername = username.trim().replace(/\s+/g, "");
     const trimmedEmail = email.trim();
     if (!trimmedFullName) {
-      setError('Ad soyad gerekli.');
+      setError(t("auth.register.err.name"));
       return;
     }
     if (!trimmedUsername) {
-      setError('Kullanıcı adı gerekli.');
+      setError(t("auth.register.err.username"));
       return;
     }
     if (!trimmedEmail || !password) {
-      setError('E-posta ve şifre gerekli.');
+      setError(t("auth.register.err.required"));
       return;
     }
     if (password.length < 6) {
-      setError('Şifre en az 6 karakter olmalı.');
+      setError(t("auth.register.err.password"));
       return;
     }
     setLoading(true);
@@ -68,18 +70,16 @@ export default function RegisterScreen() {
     setLoading(false);
 
     if (signUpError) {
-      setError(signUpError.message ?? 'Kayıt oluşturulamadı.');
+      setError(signUpError.message ?? t("auth.register.err.failed"));
       return;
     }
 
     if (data?.session) {
-      router.replace('/(tabs)');
+      router.replace("/(tabs)");
       return;
     }
 
-    setSuccessMessage(
-      'Hesabın oluşturuldu. E-posta onayı açıksa gelen kutunu kontrol et, ardından giriş yap.'
-    );
+    setSuccessMessage(t("auth.register.success"));
   }
 
   async function handleResendConfirmation() {
@@ -90,24 +90,25 @@ export default function RegisterScreen() {
     const { error: resendError } = await resendConfirmationEmail(trimmedEmail);
     setResendLoading(false);
     if (resendError) {
-      setError(resendError.message ?? 'Onay e-postası tekrar gönderilemedi.');
+      setError(resendError.message ?? t("auth.register.resendFailed"));
       return;
     }
-    setSuccessMessage('Onay e-postası tekrar gönderildi. Gelen kutunu kontrol et.');
+    setSuccessMessage(t("auth.register.resendSuccess"));
   }
 
   return (
     <ThemedView style={styles.container}>
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.keyboard}>
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        style={styles.keyboard}
+      >
         <ThemedText type="title" style={styles.title}>
-          Kayıt Ol
+          {t("auth.register.title")}
         </ThemedText>
 
         <TextInput
           style={[styles.input, { backgroundColor: inputBg, color: inputText }]}
-          placeholder="Ad Soyad"
+          placeholder={t("auth.register.fullName")}
           placeholderTextColor={placeholderColor}
           value={fullName}
           onChangeText={(text) => {
@@ -120,11 +121,11 @@ export default function RegisterScreen() {
 
         <TextInput
           style={[styles.input, { backgroundColor: inputBg, color: inputText }]}
-          placeholder="Kullanıcı adı"
+          placeholder={t("auth.register.username")}
           placeholderTextColor={placeholderColor}
           value={username}
           onChangeText={(text) => {
-            setUsername(text.replace(/\s/g, ''));
+            setUsername(text.replace(/\s/g, ""));
             setError(null);
           }}
           autoCapitalize="none"
@@ -134,7 +135,7 @@ export default function RegisterScreen() {
 
         <TextInput
           style={[styles.input, { backgroundColor: inputBg, color: inputText }]}
-          placeholder="E-posta"
+          placeholder={t("auth.register.email")}
           placeholderTextColor={placeholderColor}
           value={email}
           onChangeText={(text) => {
@@ -149,7 +150,7 @@ export default function RegisterScreen() {
 
         <TextInput
           style={[styles.input, { backgroundColor: inputBg, color: inputText }]}
-          placeholder="Şifre (en az 6 karakter)"
+          placeholder={t("auth.register.password")}
           placeholderTextColor={placeholderColor}
           value={password}
           onChangeText={(text) => {
@@ -168,11 +169,19 @@ export default function RegisterScreen() {
 
         {successMessage ? (
           <>
-            <ThemedText style={styles.success} lightColor="#0a7ea4" darkColor="#6eb8e0">
+            <ThemedText
+              style={styles.success}
+              lightColor="#0a7ea4"
+              darkColor="#6eb8e0"
+            >
               {successMessage}
             </ThemedText>
             <CustomButton
-              title={resendLoading ? 'Gönderiliyor...' : 'Onay e-postasını tekrar gönder'}
+              title={
+                resendLoading
+                  ? t("auth.register.resending")
+                  : t("auth.register.resend")
+              }
               onPress={handleResendConfirmation}
               disabled={resendLoading}
               variant="outline"
@@ -182,7 +191,9 @@ export default function RegisterScreen() {
         ) : null}
 
         <CustomButton
-          title={loading ? 'Kayıt yapılıyor...' : 'Kayıt Ol'}
+          title={
+            loading ? t("auth.register.submitting") : t("auth.register.submit")
+          }
           onPress={handleRegister}
           disabled={loading}
           style={styles.button}
@@ -192,7 +203,7 @@ export default function RegisterScreen() {
 
         <Link href="/(auth)/login" asChild>
           <ThemedText type="link" style={styles.link}>
-            Zaten hesabın var mı? Giriş yap
+            {t("auth.register.hasAccount")}
           </ThemedText>
         </Link>
       </KeyboardAvoidingView>
@@ -203,17 +214,17 @@ export default function RegisterScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'center',
+    justifyContent: "center",
     padding: 20,
   },
   keyboard: {
-    width: '100%',
+    width: "100%",
     maxWidth: 340,
-    alignSelf: 'center',
+    alignSelf: "center",
   },
   title: {
     marginBottom: 24,
-    textAlign: 'center',
+    textAlign: "center",
   },
   input: {
     borderRadius: 12,
@@ -241,6 +252,6 @@ const styles = StyleSheet.create({
   },
   link: {
     marginTop: 24,
-    textAlign: 'center',
+    textAlign: "center",
   },
 });
