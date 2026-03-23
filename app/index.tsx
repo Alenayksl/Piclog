@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { router } from 'expo-router';
-
+import { LogCard } from '@/src/components/LogCard';
 import { useAuth } from '@/src/hooks/useAuth';
 import { ThemedText } from '@/components/themed-text';
 
