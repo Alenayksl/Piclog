@@ -1,17 +1,38 @@
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
+import { Fonts } from "@/constants/theme";
 import { CustomButton } from "@/src/components/CustomButton";
 import { useLocation } from "@/src/hooks/useLocation";
+import { reverseGeocode } from "@/src/services/location";
 import { supabase } from "@/src/services/supabase";
 import { getWeather } from "@/src/services/weather";
+import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
 import { useState } from "react";
-import { StyleSheet, TextInput } from "react-native";
+import { StyleSheet, TextInput, View } from "react-native";
+
+function base64ToArrayBuffer(base64: string): ArrayBuffer {
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i += 1) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  return bytes.buffer;
+}
+
+function inferExtension(mimeType?: string | null) {
+  if (!mimeType) return "jpg";
+  if (mimeType.includes("png")) return "png";
+  if (mimeType.includes("webp")) return "webp";
+  if (mimeType.includes("heic")) return "heic";
+  return "jpg";
+}
 
 export default function CreateScreen() {
-  const [image, setImage] = useState<string | null>(null);
+  const [image, setImage] = useState<ImagePicker.ImagePickerAsset | null>(null);
   const [loading, setLoading] = useState(false);
   const [note, setnote] = useState("");
+  const backgroundGif = require("../../assets/images/backgrounds/backgorund.gif");
 
   const { location } = useLocation();
 
@@ -28,10 +49,11 @@ export default function CreateScreen() {
       allowsEditing: true,
       aspect: [4, 3],
       quality: 1,
+      base64: true,
     });
 
     if (!result.canceled) {
-      setImage(result.assets[0].uri);
+      setImage(result.assets[0]);
     }
   }
 
@@ -46,9 +68,10 @@ export default function CreateScreen() {
       allowsEditing: true,
       aspect: [4, 3],
       quality: 1,
+      base64: true,
     });
     if (!result.canceled) {
-      setImage(result.assets[0].uri);
+      setImage(result.assets[0]);
     }
   }
 
@@ -86,19 +109,36 @@ export default function CreateScreen() {
         location.latitude,
         location.longitude,
       );
+
+      const addressData = await reverseGeocode(
+        location.latitude,
+        location.longitude,
+      );
+
+      const locationName = addressData?.city
+        ? [addressData.city, addressData.country].filter(Boolean).join(", ")
+        : (addressData?.formatted ?? null);
+
       if (!weatherData) {
         alert("Hava durum bilgisi alınamadı. Lütfen tekrar deneyin.");
         setLoading(false);
         return;
       }
-      const response = await fetch(image);
-      const blob = await response.blob();
-      const fileName = `${user.id}/${Date.now()}.jpg`;
+      if (!image.base64) {
+        alert("Fotoğraf verisi alınamadı. Lütfen tekrar deneyin.");
+        setLoading(false);
+        return;
+      }
+
+      const imageBuffer = base64ToArrayBuffer(image.base64);
+      const extension = inferExtension(image.mimeType);
+      const fileName = `${user.id}/${Date.now()}.${extension}`;
 
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from("photos")
-        .upload(fileName, blob, {
+        .upload(fileName, imageBuffer, {
           cacheControl: "3600",
+          contentType: image.mimeType ?? "image/jpeg",
           upsert: false,
         });
       if (uploadError) {
@@ -123,7 +163,7 @@ export default function CreateScreen() {
         user_id: user.id,
         image_url: publicUrlData.publicUrl,
         note,
-        location_name: null,
+        location_name: locationName,
         latitude: location.latitude,
         longitude: location.longitude,
         weather_condition: weatherData.description,
@@ -148,40 +188,67 @@ export default function CreateScreen() {
 
   return (
     <ThemedView style={styles.container}>
-      <ThemedText type="title">Fotoğraf Ekle</ThemedText>
-      <CustomButton
-        title="Galeriden Seç"
-        onPress={pickImageFromLibrary}
-        disabled={loading}
+      <Image
+        source={backgroundGif}
+        style={styles.backgroundGif}
+        contentFit="cover"
       />
-      <CustomButton
-        title="Fotoğraf Çek"
-        onPress={takePhoto}
-        disabled={loading}
-      />
+      <View style={styles.backgroundTint} />
 
-      {image && (
-        <>
-          <TextInput
-            placeholder="Not ekle..."
-            value={note}
-            onChangeText={setnote}
-            style={{
-              width: "100%",
-              padding: 10,
-              borderColor: "#ccc",
-              borderWidth: 1,
-              borderRadius: 5,
-              marginTop: 10,
-            }}
-          />
-          <CustomButton
-            title={loading ? "Kaydediliyor..." : "Kaydet"}
-            onPress={handleSavePost}
-            disabled={loading}
-          />
-        </>
-      )}
+      <ThemedView style={styles.panel}>
+        <View style={styles.pixelDotTopLeft} />
+        <View style={styles.pixelDotTopRight} />
+
+        <ThemedText type="title" style={styles.title}>
+          Fotoğraf Ekle
+        </ThemedText>
+
+        <CustomButton
+          title="Galeriden Sec"
+          onPress={pickImageFromLibrary}
+          disabled={loading}
+          style={styles.actionButton}
+          textStyle={styles.buttonText}
+        />
+        <CustomButton
+          title="Fotograf Cek"
+          onPress={takePhoto}
+          disabled={loading}
+          style={styles.actionButtonAlt}
+          textStyle={styles.buttonText}
+        />
+
+        {image ? (
+          <>
+            <ThemedView style={styles.previewFrame}>
+              <Image
+                source={{ uri: image.uri }}
+                style={styles.previewImage}
+                contentFit="cover"
+              />
+            </ThemedView>
+
+            <TextInput
+              placeholder="Not ekle..."
+              placeholderTextColor="#b85a89"
+              value={note}
+              onChangeText={setnote}
+              style={styles.noteInput}
+            />
+            <CustomButton
+              title={loading ? "Kaydediliyor..." : "Kaydet"}
+              onPress={handleSavePost}
+              disabled={loading}
+              style={styles.saveButton}
+              textStyle={styles.buttonText}
+            />
+          </>
+        ) : (
+          <ThemedText style={styles.hintText}>
+            Bir fotograf sec ve pixel gunlugune ekle.
+          </ThemedText>
+        )}
+      </ThemedView>
     </ThemedView>
   );
 }
@@ -189,8 +256,136 @@ export default function CreateScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    padding: 16,
     alignItems: "center",
     justifyContent: "center",
-    padding: 20,
+    position: "relative",
+  },
+  backgroundGif: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  backgroundTint: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(255, 245, 250, 0.35)",
+  },
+  panel: {
+    width: "100%",
+    maxWidth: 440,
+    borderWidth: 3,
+    borderColor: "#ff9ac5",
+    backgroundColor: "#ffe4f1",
+    padding: 14,
+    shadowColor: "#c14d82",
+    shadowOpacity: 0.9,
+    shadowRadius: 0,
+    shadowOffset: { width: 5, height: 5 },
+    elevation: 8,
+    position: "relative",
+    gap: 10,
+    justifyContent: "center",
+    zIndex: 1,
+  },
+  title: {
+    fontFamily: Fonts?.mono,
+    color: "#7f1d49",
+    lineHeight: 38,
+  },
+  subtitle: {
+    fontFamily: Fonts?.mono,
+    color: "#8f2b57",
+    fontSize: 12,
+    marginBottom: 6,
+    letterSpacing: 0.6,
+  },
+  actionButton: {
+    width: "100%",
+    borderRadius: 0,
+    borderWidth: 3,
+    borderColor: "#ff7fb3",
+    backgroundColor: "#ff7fb3",
+    shadowColor: "#c14d82",
+    shadowOpacity: 0.9,
+    shadowRadius: 0,
+    shadowOffset: { width: 3, height: 3 },
+    elevation: 6,
+  },
+  actionButtonAlt: {
+    width: "100%",
+    borderRadius: 0,
+    borderWidth: 3,
+    borderColor: "#ff9ac5",
+    backgroundColor: "#ff9ac5",
+    shadowColor: "#c14d82",
+    shadowOpacity: 0.9,
+    shadowRadius: 0,
+    shadowOffset: { width: 3, height: 3 },
+    elevation: 6,
+  },
+  previewFrame: {
+    width: "100%",
+    height: 250,
+    borderWidth: 3,
+    borderColor: "#ff9ac5",
+    backgroundColor: "#fff1f8",
+    padding: 4,
+  },
+  previewImage: {
+    width: "100%",
+    height: "100%",
+  },
+  noteInput: {
+    width: "100%",
+    minHeight: 52,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderColor: "#ff9ac5",
+    borderWidth: 3,
+    borderRadius: 0,
+    backgroundColor: "#fff7fb",
+    color: "#7f1d49",
+    fontFamily: Fonts?.mono,
+    fontSize: 14,
+  },
+  saveButton: {
+    width: "100%",
+    borderRadius: 0,
+    borderWidth: 3,
+    borderColor: "#ff6ea9",
+    backgroundColor: "#ff6ea9",
+    marginTop: 2,
+    shadowColor: "#c14d82",
+    shadowOpacity: 0.9,
+    shadowRadius: 0,
+    shadowOffset: { width: 3, height: 3 },
+    elevation: 6,
+  },
+  buttonText: {
+    fontFamily: Fonts?.mono,
+    fontSize: 13,
+    letterSpacing: 0.8,
+    textTransform: "uppercase",
+    color: "#fff7fb",
+  },
+  hintText: {
+    marginTop: 8,
+    fontFamily: Fonts?.mono,
+    color: "#8f2b57",
+    opacity: 0.9,
+  },
+  pixelDotTopLeft: {
+    position: "absolute",
+    width: 8,
+    height: 8,
+    top: -3,
+    left: -3,
+    backgroundColor: "#ff7fb3",
+  },
+  pixelDotTopRight: {
+    position: "absolute",
+    width: 8,
+    height: 8,
+    top: -3,
+    right: -3,
+    backgroundColor: "#ff7fb3",
   },
 });
