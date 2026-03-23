@@ -1,37 +1,39 @@
-import { useState } from 'react';
+import { Link } from "expo-router";
+import { useState } from "react";
 import {
-  StyleSheet,
-  TextInput,
-  KeyboardAvoidingView,
-  Platform,
-  ActivityIndicator,
-} from 'react-native';
-import { Link } from 'expo-router';
+    ActivityIndicator,
+    KeyboardAvoidingView,
+    Platform,
+    StyleSheet,
+    TextInput,
+} from "react-native";
 
-import { CustomButton } from '@/src/components/CustomButton';
-import { sendPasswordResetEmail } from '@/src/services/supabase';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Colors } from '@/constants/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
+import { ThemedText } from "@/components/themed-text";
+import { ThemedView } from "@/components/themed-view";
+import { Colors } from "@/constants/theme";
+import { useColorScheme } from "@/hooks/use-color-scheme";
+import { CustomButton } from "@/src/components/CustomButton";
+import { useI18n } from "@/src/i18n/app-i18n";
+import { sendPasswordResetEmail } from "@/src/services/supabase";
 
 export default function ForgotPasswordScreen() {
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+  const { t } = useI18n();
 
   const colorScheme = useColorScheme();
-  const isDark = colorScheme === 'dark';
-  const inputBg = isDark ? '#25282a' : '#f0f0f0';
-  const inputText = Colors[colorScheme ?? 'light'].text;
-  const placeholderColor = isDark ? '#9BA1A6' : '#687076';
+  const isDark = colorScheme === "dark";
+  const inputBg = isDark ? "#25282a" : "#f0f0f0";
+  const inputText = Colors[colorScheme ?? "light"].text;
+  const placeholderColor = isDark ? "#9BA1A6" : "#687076";
 
   async function handleSendReset() {
     setError(null);
     const trimmedEmail = email.trim();
     if (!trimmedEmail) {
-      setError('E-posta adresi gerekli.');
+      setError(t("auth.forgot.err.required"));
       return;
     }
     setLoading(true);
@@ -39,7 +41,7 @@ export default function ForgotPasswordScreen() {
     setLoading(false);
 
     if (resetError) {
-      setError(resetError.message ?? 'Şifre sıfırlama e-postası gönderilemedi.');
+      setError(resetError.message ?? t("auth.forgot.err.failed"));
       return;
     }
 
@@ -50,15 +52,18 @@ export default function ForgotPasswordScreen() {
     return (
       <ThemedView style={styles.container}>
         <ThemedText type="title" style={styles.title}>
-          E-posta gönderildi
+          {t("auth.forgot.sentTitle")}
         </ThemedText>
-        <ThemedText style={styles.successText} lightColor="#0a7ea4" darkColor="#6eb8e0">
-          Şifre sıfırlama linki {email.trim()} adresine gönderildi. Gelen kutunuzu (ve spam
-          klasörünü) kontrol edin. Linke tıklayıp yeni şifrenizi belirleyebilirsiniz.
+        <ThemedText
+          style={styles.successText}
+          lightColor="#0a7ea4"
+          darkColor="#6eb8e0"
+        >
+          {t("auth.forgot.sentText", { email: email.trim() })}
         </ThemedText>
         <Link href="/(auth)/login" asChild>
           <ThemedText type="link" style={styles.link}>
-            Giriş sayfasına dön
+            {t("auth.forgot.back")}
           </ThemedText>
         </Link>
       </ThemedView>
@@ -68,18 +73,17 @@ export default function ForgotPasswordScreen() {
   return (
     <ThemedView style={styles.container}>
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.keyboard}>
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        style={styles.keyboard}
+      >
         <ThemedText type="title" style={styles.title}>
-          Şifremi unuttum
+          {t("auth.forgot.title")}
         </ThemedText>
-        <ThemedText style={styles.hint}>
-          Kayıtlı e-posta adresinizi girin. Size şifre sıfırlama linki göndereceğiz.
-        </ThemedText>
+        <ThemedText style={styles.hint}>{t("auth.forgot.hint")}</ThemedText>
 
         <TextInput
           style={[styles.input, { backgroundColor: inputBg, color: inputText }]}
-          placeholder="E-posta"
+          placeholder={t("auth.forgot.email")}
           placeholderTextColor={placeholderColor}
           value={email}
           onChangeText={(text) => {
@@ -99,7 +103,9 @@ export default function ForgotPasswordScreen() {
         ) : null}
 
         <CustomButton
-          title={loading ? 'Gönderiliyor...' : 'Sıfırlama linki gönder'}
+          title={
+            loading ? t("auth.forgot.submitting") : t("auth.forgot.submit")
+          }
           onPress={handleSendReset}
           disabled={loading}
           style={styles.button}
@@ -109,7 +115,7 @@ export default function ForgotPasswordScreen() {
 
         <Link href="/(auth)/login" asChild>
           <ThemedText type="link" style={styles.link}>
-            Giriş sayfasına dön
+            {t("auth.forgot.back")}
           </ThemedText>
         </Link>
       </KeyboardAvoidingView>
@@ -120,23 +126,23 @@ export default function ForgotPasswordScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'center',
+    justifyContent: "center",
     padding: 20,
   },
   keyboard: {
-    width: '100%',
+    width: "100%",
     maxWidth: 340,
-    alignSelf: 'center',
+    alignSelf: "center",
   },
   title: {
     marginBottom: 12,
-    textAlign: 'center',
+    textAlign: "center",
   },
   hint: {
     fontSize: 14,
     opacity: 0.85,
     marginBottom: 20,
-    textAlign: 'center',
+    textAlign: "center",
   },
   input: {
     borderRadius: 12,
@@ -152,7 +158,7 @@ const styles = StyleSheet.create({
   successText: {
     fontSize: 14,
     marginBottom: 24,
-    textAlign: 'center',
+    textAlign: "center",
   },
   button: {
     marginTop: 8,
@@ -162,6 +168,6 @@ const styles = StyleSheet.create({
   },
   link: {
     marginTop: 24,
-    textAlign: 'center',
+    textAlign: "center",
   },
 });

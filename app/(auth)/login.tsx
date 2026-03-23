@@ -1,44 +1,46 @@
-import { useState, useEffect } from 'react';
+import { Link, router } from "expo-router";
+import { useEffect, useState } from "react";
 import {
-  StyleSheet,
-  TextInput,
-  KeyboardAvoidingView,
-  Platform,
-  ActivityIndicator,
-} from 'react-native';
-import { Link, router } from 'expo-router';
+    ActivityIndicator,
+    KeyboardAvoidingView,
+    Platform,
+    StyleSheet,
+    TextInput,
+} from "react-native";
 
-import { CustomButton } from '@/src/components/CustomButton';
-import { signIn } from '@/src/services/supabase';
-import { useAuth } from '@/src/hooks/useAuth';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Colors } from '@/constants/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
+import { ThemedText } from "@/components/themed-text";
+import { ThemedView } from "@/components/themed-view";
+import { Colors } from "@/constants/theme";
+import { useColorScheme } from "@/hooks/use-color-scheme";
+import { CustomButton } from "@/src/components/CustomButton";
+import { useAuth } from "@/src/hooks/useAuth";
+import { useI18n } from "@/src/i18n/app-i18n";
+import { signIn } from "@/src/services/supabase";
 
 export default function LoginScreen() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const { isAuthenticated, loading: authLoading } = useAuth();
+  const { t } = useI18n();
 
   useEffect(() => {
     if (authLoading) return;
-    if (isAuthenticated) router.replace('/(tabs)');
+    if (isAuthenticated) router.replace("/(tabs)");
   }, [authLoading, isAuthenticated]);
 
   const colorScheme = useColorScheme();
-  const isDark = colorScheme === 'dark';
-  const inputBg = isDark ? '#25282a' : '#f0f0f0';
-  const inputText = Colors[colorScheme ?? 'light'].text;
-  const placeholderColor = isDark ? '#9BA1A6' : '#687076';
+  const isDark = colorScheme === "dark";
+  const inputBg = isDark ? "#25282a" : "#f0f0f0";
+  const inputText = Colors[colorScheme ?? "light"].text;
+  const placeholderColor = isDark ? "#9BA1A6" : "#687076";
 
   async function handleLogin() {
     setError(null);
     const trimmedEmail = email.trim();
     if (!trimmedEmail || !password) {
-      setError('E-posta ve şifre gerekli.');
+      setError(t("auth.login.err.required"));
       return;
     }
     setLoading(true);
@@ -46,27 +48,28 @@ export default function LoginScreen() {
     setLoading(false);
 
     if (signInError) {
-      setError(signInError.message ?? 'Giriş yapılamadı.');
+      setError(signInError.message ?? t("auth.login.err.failed"));
       return;
     }
 
     if (data?.session) {
-      router.replace('/(tabs)');
+      router.replace("/(tabs)");
     }
   }
 
   return (
     <ThemedView style={styles.container}>
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.keyboard}>
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        style={styles.keyboard}
+      >
         <ThemedText type="title" style={styles.title}>
-          Giriş Yap
+          {t("auth.login.title")}
         </ThemedText>
 
         <TextInput
           style={[styles.input, { backgroundColor: inputBg, color: inputText }]}
-          placeholder="E-posta"
+          placeholder={t("auth.login.email")}
           placeholderTextColor={placeholderColor}
           value={email}
           onChangeText={(text) => {
@@ -81,7 +84,7 @@ export default function LoginScreen() {
 
         <TextInput
           style={[styles.input, { backgroundColor: inputBg, color: inputText }]}
-          placeholder="Şifre"
+          placeholder={t("auth.login.password")}
           placeholderTextColor={placeholderColor}
           value={password}
           onChangeText={(text) => {
@@ -99,7 +102,7 @@ export default function LoginScreen() {
         ) : null}
 
         <CustomButton
-          title={loading ? 'Giriş yapılıyor...' : 'Giriş Yap'}
+          title={loading ? t("auth.login.submitting") : t("auth.login.submit")}
           onPress={handleLogin}
           disabled={loading}
           style={styles.button}
@@ -109,13 +112,13 @@ export default function LoginScreen() {
 
         <Link href="/(auth)/forgot-password" asChild>
           <ThemedText type="link" style={styles.forgotLink}>
-            Şifremi unuttum
+            {t("auth.login.forgot")}
           </ThemedText>
         </Link>
 
         <Link href="/(auth)/register" asChild>
           <ThemedText type="link" style={styles.link}>
-            Hesabın yok mu? Kayıt ol
+            {t("auth.login.noAccount")}
           </ThemedText>
         </Link>
       </KeyboardAvoidingView>
@@ -126,17 +129,17 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'center',
+    justifyContent: "center",
     padding: 20,
   },
   keyboard: {
-    width: '100%',
+    width: "100%",
     maxWidth: 340,
-    alignSelf: 'center',
+    alignSelf: "center",
   },
   title: {
     marginBottom: 24,
-    textAlign: 'center',
+    textAlign: "center",
   },
   input: {
     borderRadius: 12,
@@ -157,10 +160,10 @@ const styles = StyleSheet.create({
   },
   forgotLink: {
     marginTop: 16,
-    textAlign: 'center',
+    textAlign: "center",
   },
   link: {
     marginTop: 24,
-    textAlign: 'center',
+    textAlign: "center",
   },
 });

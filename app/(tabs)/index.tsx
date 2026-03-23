@@ -2,12 +2,14 @@ import { Image } from "expo-image";
 import { router, useFocusEffect } from "expo-router";
 import { useCallback, useState } from "react";
 import { FlatList, StyleSheet, View } from "react-native";
-
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { LogCard } from "@/src/components/LogCard";
+import { useI18n } from "@/src/i18n/app-i18n";
 import { reverseGeocode } from "@/src/services/location";
 import { supabase } from "@/src/services/supabase";
+import { getWeather } from "@/src/services/weather";
+import { usePixelTheme, type PixelTheme } from "@/src/theme/pixel-theme";
 
 type LogItem = {
   id: string;
@@ -49,7 +51,9 @@ function extractPhotoPath(imageUrl: string): string | null {
 export default function FeedScreen() {
   const [logs, setLogs] = useState<LogItem[]>([]);
   const [loading, setLoading] = useState(false);
-  const backgroundGif = require("../../assets/images/backgrounds/backgorund.gif");
+  const { t, language } = useI18n();
+  const { theme } = usePixelTheme();
+  const styles = getStyles(theme);
 
   const fetchLogs = useCallback(async () => {
     setLoading(true);
@@ -70,20 +74,34 @@ export default function FeedScreen() {
     const resolvedLogs = await Promise.all(
       ((data ?? []) as LogItem[]).map(async (item) => {
         let resolvedLocation = item.location_name;
+        let resolvedWeather = item.weather_condition;
 
-        if (
-          !resolvedLocation &&
-          item.latitude != null &&
-          item.longitude != null
-        ) {
-          const addressData = await reverseGeocode(
-            item.latitude,
-            item.longitude,
-          );
-          if (addressData?.city) {
-            resolvedLocation = [addressData.city, addressData.country]
-              .filter(Boolean)
-              .join(", ");
+        if (item.latitude != null && item.longitude != null) {
+          const shouldResolveLocation = !resolvedLocation || language === "en";
+
+          if (shouldResolveLocation) {
+            const addressData = await reverseGeocode(
+              item.latitude,
+              item.longitude,
+              language,
+            );
+            if (addressData?.city) {
+              resolvedLocation = [addressData.city, addressData.country]
+                .filter(Boolean)
+                .join(", ");
+            }
+          }
+
+          const shouldResolveWeather = !resolvedWeather || language === "en";
+          if (shouldResolveWeather) {
+            const weatherData = await getWeather(
+              item.latitude,
+              item.longitude,
+              language,
+            );
+            if (weatherData?.description) {
+              resolvedWeather = weatherData.description;
+            }
           }
         }
 
@@ -91,12 +109,17 @@ export default function FeedScreen() {
           return {
             ...item,
             location_name: resolvedLocation,
+            weather_condition: resolvedWeather,
           };
         }
 
         const photoPath = extractPhotoPath(item.image_url);
         if (!photoPath) {
-          return item;
+          return {
+            ...item,
+            location_name: resolvedLocation,
+            weather_condition: resolvedWeather,
+          };
         }
 
         const { data: signedData, error: signedError } = await supabase.storage
@@ -108,6 +131,7 @@ export default function FeedScreen() {
             ...item,
             image_url: null,
             location_name: resolvedLocation,
+            weather_condition: resolvedWeather,
           };
         }
 
@@ -115,13 +139,14 @@ export default function FeedScreen() {
           ...item,
           image_url: signedData.signedUrl,
           location_name: resolvedLocation,
+          weather_condition: resolvedWeather,
         };
       }),
     );
 
     setLogs(resolvedLogs.filter((item) => !!item.image_url));
     setLoading(false);
-  }, []);
+  }, [language]);
 
   useFocusEffect(
     useCallback(() => {
@@ -132,14 +157,14 @@ export default function FeedScreen() {
   return (
     <ThemedView style={styles.container}>
       <Image
-        source={backgroundGif}
+        source={theme.backgroundAsset}
         style={styles.backgroundGif}
         contentFit="cover"
       />
       <View style={styles.backgroundTint} />
 
       <ThemedText type="title" style={styles.pageTitle}>
-        Akış
+        {t("tabs.feedTitle")}
       </ThemedText>
 
       <FlatList
@@ -150,7 +175,7 @@ export default function FeedScreen() {
         onRefresh={fetchLogs}
         refreshing={loading}
         ListEmptyComponent={
-          <ThemedText style={styles.emptyText}>Henüz paylaşım yok.</ThemedText>
+          <ThemedText style={styles.emptyText}>{t("tabs.noPosts")}</ThemedText>
         }
         renderItem={({ item }) => (
           <LogCard
@@ -169,34 +194,36 @@ export default function FeedScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 20,
-    position: "relative",
-  },
-  backgroundGif: {
-    ...StyleSheet.absoluteFillObject,
-  },
-  backgroundTint: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(255, 245, 250, 0.3)",
-  },
-  pageTitle: {
-    zIndex: 1,
-    color: "#7f1d49",
-    marginBottom: 4,
-  },
-  list: {
-    zIndex: 1,
-  },
-  listContent: {
-    paddingTop: 12,
-    paddingBottom: 24,
-    flexGrow: 1,
-  },
-  emptyText: {
-    marginTop: 16,
-    opacity: 0.7,
-  },
-});
+function getStyles(theme: PixelTheme) {
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      padding: 20,
+      position: "relative",
+    },
+    backgroundGif: {
+      ...StyleSheet.absoluteFillObject,
+    },
+    backgroundTint: {
+      ...StyleSheet.absoluteFillObject,
+      backgroundColor: theme.backgroundTint,
+    },
+    pageTitle: {
+      zIndex: 1,
+      color: theme.pageTitle,
+      marginBottom: 4,
+    },
+    list: {
+      zIndex: 1,
+    },
+    listContent: {
+      paddingTop: 12,
+      paddingBottom: 24,
+      flexGrow: 1,
+    },
+    emptyText: {
+      marginTop: 16,
+      opacity: 0.7,
+    },
+  });
+}

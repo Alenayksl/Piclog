@@ -3,9 +3,11 @@ import { ThemedView } from "@/components/themed-view";
 import { Fonts } from "@/constants/theme";
 import { CustomButton } from "@/src/components/CustomButton";
 import { useLocation } from "@/src/hooks/useLocation";
+import { useI18n } from "@/src/i18n/app-i18n";
 import { reverseGeocode } from "@/src/services/location";
 import { supabase } from "@/src/services/supabase";
 import { getWeather } from "@/src/services/weather";
+import { usePixelTheme, type PixelTheme } from "@/src/theme/pixel-theme";
 import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
 import { useState } from "react";
@@ -32,7 +34,9 @@ export default function CreateScreen() {
   const [image, setImage] = useState<ImagePicker.ImagePickerAsset | null>(null);
   const [loading, setLoading] = useState(false);
   const [note, setnote] = useState("");
-  const backgroundGif = require("../../assets/images/backgrounds/backgorund.gif");
+  const { t, language } = useI18n();
+  const { theme } = usePixelTheme();
+  const styles = getStyles(theme);
 
   const { location } = useLocation();
 
@@ -40,7 +44,7 @@ export default function CreateScreen() {
     const permissionResult =
       await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (permissionResult.granted === false) {
-      alert("Permission to access camera roll is required!");
+      alert(t("create.err.permissionGallery"));
       return;
     }
 
@@ -61,7 +65,7 @@ export default function CreateScreen() {
     const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
 
     if (permissionResult.granted === false) {
-      alert("Permission to access camera is required!");
+      alert(t("create.err.permissionCamera"));
       return;
     }
     const result = await ImagePicker.launchCameraAsync({
@@ -77,17 +81,17 @@ export default function CreateScreen() {
 
   const handleSavePost = async function saveLog() {
     if (!image) {
-      alert("Lütfen bir fotoğraf seçin veya çekin.");
+      alert(t("create.err.selectPhoto"));
       return;
     }
 
     if (!note.trim()) {
-      alert("Lütfen bir not ekleyin.");
+      alert(t("create.err.addNote"));
       return;
     }
 
     if (!location) {
-      alert("Konum bilgisi alınamadı. Lütfen konum izinlerini kontrol edin.");
+      alert(t("create.err.locationMissing"));
       return;
     }
     setLoading(true);
@@ -100,7 +104,7 @@ export default function CreateScreen() {
 
       if (userError || !user) {
         console.error("Error getting user:", userError);
-        alert("Kullanıcı bilgisi alınamadı. Lütfen tekrar giriş yapın.");
+        alert(t("create.err.userMissing"));
         setLoading(false);
         return;
       }
@@ -108,11 +112,13 @@ export default function CreateScreen() {
       const weatherData = await getWeather(
         location.latitude,
         location.longitude,
+        language,
       );
 
       const addressData = await reverseGeocode(
         location.latitude,
         location.longitude,
+        language,
       );
 
       const locationName = addressData?.city
@@ -120,12 +126,12 @@ export default function CreateScreen() {
         : (addressData?.formatted ?? null);
 
       if (!weatherData) {
-        alert("Hava durum bilgisi alınamadı. Lütfen tekrar deneyin.");
+        alert(t("create.err.weatherMissing"));
         setLoading(false);
         return;
       }
       if (!image.base64) {
-        alert("Fotoğraf verisi alınamadı. Lütfen tekrar deneyin.");
+        alert(t("create.err.photoDataMissing"));
         setLoading(false);
         return;
       }
@@ -143,14 +149,14 @@ export default function CreateScreen() {
         });
       if (uploadError) {
         console.error("Error uploading image:", uploadError);
-        alert("Fotoğraf yüklenirken bir hata oluştu. Lütfen tekrar deneyin.");
+        alert(t("create.err.uploadFailed"));
         setLoading(false);
         return;
       }
 
       if (!uploadData?.path) {
         console.error("Upload completed but path is missing", uploadData);
-        alert("Yüklenen fotoğraf yolu alınamadı. Lütfen tekrar deneyin.");
+        alert(t("create.err.pathMissing"));
         setLoading(false);
         return;
       }
@@ -171,16 +177,16 @@ export default function CreateScreen() {
       });
       if (postError) {
         console.error("Error saving post:", postError);
-        alert(`Gönderi kaydedilirken hata: ${postError.message}`);
+        alert(t("create.err.saveFailed", { message: postError.message }));
         setLoading(false);
         return;
       }
-      alert("Gönderi başarıyla kaydedildi!");
+      alert(t("create.success"));
       setImage(null);
       setnote("");
     } catch (error) {
       console.error("Error:", error);
-      alert("Bir hata oluştu. Lütfen tekrar deneyin.");
+      alert(t("create.err.generic"));
     } finally {
       setLoading(false);
     }
@@ -189,7 +195,7 @@ export default function CreateScreen() {
   return (
     <ThemedView style={styles.container}>
       <Image
-        source={backgroundGif}
+        source={theme.backgroundAsset}
         style={styles.backgroundGif}
         contentFit="cover"
       />
@@ -200,18 +206,18 @@ export default function CreateScreen() {
         <View style={styles.pixelDotTopRight} />
 
         <ThemedText type="title" style={styles.title}>
-          Fotoğraf Ekle
+          {t("tabs.createTitle")}
         </ThemedText>
 
         <CustomButton
-          title="Galeriden Sec"
+          title={t("create.pickFromGallery")}
           onPress={pickImageFromLibrary}
           disabled={loading}
           style={styles.actionButton}
           textStyle={styles.buttonText}
         />
         <CustomButton
-          title="Fotograf Cek"
+          title={t("create.takePhoto")}
           onPress={takePhoto}
           disabled={loading}
           style={styles.actionButtonAlt}
@@ -229,14 +235,14 @@ export default function CreateScreen() {
             </ThemedView>
 
             <TextInput
-              placeholder="Not ekle..."
-              placeholderTextColor="#b85a89"
+              placeholder={t("create.notePlaceholder")}
+              placeholderTextColor={theme.subtitle}
               value={note}
               onChangeText={setnote}
               style={styles.noteInput}
             />
             <CustomButton
-              title={loading ? "Kaydediliyor..." : "Kaydet"}
+              title={loading ? t("create.saving") : t("create.save")}
               onPress={handleSavePost}
               disabled={loading}
               style={styles.saveButton}
@@ -244,148 +250,148 @@ export default function CreateScreen() {
             />
           </>
         ) : (
-          <ThemedText style={styles.hintText}>
-            Bir fotograf sec ve pixel gunlugune ekle.
-          </ThemedText>
+          <ThemedText style={styles.hintText}>{t("create.hint")}</ThemedText>
         )}
       </ThemedView>
     </ThemedView>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 16,
-    alignItems: "center",
-    justifyContent: "center",
-    position: "relative",
-  },
-  backgroundGif: {
-    ...StyleSheet.absoluteFillObject,
-  },
-  backgroundTint: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(255, 245, 250, 0.35)",
-  },
-  panel: {
-    width: "100%",
-    maxWidth: 440,
-    borderWidth: 3,
-    borderColor: "#ff9ac5",
-    backgroundColor: "#ffe4f1",
-    padding: 14,
-    shadowColor: "#c14d82",
-    shadowOpacity: 0.9,
-    shadowRadius: 0,
-    shadowOffset: { width: 5, height: 5 },
-    elevation: 8,
-    position: "relative",
-    gap: 10,
-    justifyContent: "center",
-    zIndex: 1,
-  },
-  title: {
-    fontFamily: Fonts?.mono,
-    color: "#7f1d49",
-    lineHeight: 38,
-  },
-  subtitle: {
-    fontFamily: Fonts?.mono,
-    color: "#8f2b57",
-    fontSize: 12,
-    marginBottom: 6,
-    letterSpacing: 0.6,
-  },
-  actionButton: {
-    width: "100%",
-    borderRadius: 0,
-    borderWidth: 3,
-    borderColor: "#ff7fb3",
-    backgroundColor: "#ff7fb3",
-    shadowColor: "#c14d82",
-    shadowOpacity: 0.9,
-    shadowRadius: 0,
-    shadowOffset: { width: 3, height: 3 },
-    elevation: 6,
-  },
-  actionButtonAlt: {
-    width: "100%",
-    borderRadius: 0,
-    borderWidth: 3,
-    borderColor: "#ff9ac5",
-    backgroundColor: "#ff9ac5",
-    shadowColor: "#c14d82",
-    shadowOpacity: 0.9,
-    shadowRadius: 0,
-    shadowOffset: { width: 3, height: 3 },
-    elevation: 6,
-  },
-  previewFrame: {
-    width: "100%",
-    height: 250,
-    borderWidth: 3,
-    borderColor: "#ff9ac5",
-    backgroundColor: "#fff1f8",
-    padding: 4,
-  },
-  previewImage: {
-    width: "100%",
-    height: "100%",
-  },
-  noteInput: {
-    width: "100%",
-    minHeight: 52,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderColor: "#ff9ac5",
-    borderWidth: 3,
-    borderRadius: 0,
-    backgroundColor: "#fff7fb",
-    color: "#7f1d49",
-    fontFamily: Fonts?.mono,
-    fontSize: 14,
-  },
-  saveButton: {
-    width: "100%",
-    borderRadius: 0,
-    borderWidth: 3,
-    borderColor: "#ff6ea9",
-    backgroundColor: "#ff6ea9",
-    marginTop: 2,
-    shadowColor: "#c14d82",
-    shadowOpacity: 0.9,
-    shadowRadius: 0,
-    shadowOffset: { width: 3, height: 3 },
-    elevation: 6,
-  },
-  buttonText: {
-    fontFamily: Fonts?.mono,
-    fontSize: 13,
-    letterSpacing: 0.8,
-    textTransform: "uppercase",
-    color: "#fff7fb",
-  },
-  hintText: {
-    marginTop: 8,
-    fontFamily: Fonts?.mono,
-    color: "#8f2b57",
-    opacity: 0.9,
-  },
-  pixelDotTopLeft: {
-    position: "absolute",
-    width: 8,
-    height: 8,
-    top: -3,
-    left: -3,
-    backgroundColor: "#ff7fb3",
-  },
-  pixelDotTopRight: {
-    position: "absolute",
-    width: 8,
-    height: 8,
-    top: -3,
-    right: -3,
-    backgroundColor: "#ff7fb3",
-  },
-});
+function getStyles(theme: PixelTheme) {
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      padding: 16,
+      alignItems: "center",
+      justifyContent: "center",
+      position: "relative",
+    },
+    backgroundGif: {
+      ...StyleSheet.absoluteFillObject,
+    },
+    backgroundTint: {
+      ...StyleSheet.absoluteFillObject,
+      backgroundColor: theme.backgroundTint,
+    },
+    panel: {
+      width: "100%",
+      maxWidth: 440,
+      borderWidth: 3,
+      borderColor: theme.panelBorder,
+      backgroundColor: theme.panelBg,
+      padding: 14,
+      shadowColor: theme.panelShadow,
+      shadowOpacity: 0.9,
+      shadowRadius: 0,
+      shadowOffset: { width: 5, height: 5 },
+      elevation: 8,
+      position: "relative",
+      gap: 10,
+      justifyContent: "center",
+      zIndex: 1,
+    },
+    title: {
+      fontFamily: Fonts?.mono,
+      color: theme.title,
+      lineHeight: 38,
+    },
+    subtitle: {
+      fontFamily: Fonts?.mono,
+      color: "#8f2b57",
+      fontSize: 12,
+      marginBottom: 6,
+      letterSpacing: 0.6,
+    },
+    actionButton: {
+      width: "100%",
+      borderRadius: 0,
+      borderWidth: 3,
+      borderColor: theme.panelBorder,
+      backgroundColor: theme.buttonPrimary,
+      shadowColor: theme.panelShadow,
+      shadowOpacity: 0.9,
+      shadowRadius: 0,
+      shadowOffset: { width: 3, height: 3 },
+      elevation: 6,
+    },
+    actionButtonAlt: {
+      width: "100%",
+      borderRadius: 0,
+      borderWidth: 3,
+      borderColor: theme.panelBorder,
+      backgroundColor: theme.buttonSecondary,
+      shadowColor: theme.panelShadow,
+      shadowOpacity: 0.9,
+      shadowRadius: 0,
+      shadowOffset: { width: 3, height: 3 },
+      elevation: 6,
+    },
+    previewFrame: {
+      width: "100%",
+      height: 250,
+      borderWidth: 3,
+      borderColor: theme.panelBorder,
+      backgroundColor: theme.inputBg,
+      padding: 4,
+    },
+    previewImage: {
+      width: "100%",
+      height: "100%",
+    },
+    noteInput: {
+      width: "100%",
+      minHeight: 52,
+      paddingHorizontal: 12,
+      paddingVertical: 10,
+      borderColor: theme.inputBorder,
+      borderWidth: 3,
+      borderRadius: 0,
+      backgroundColor: theme.inputBg,
+      color: theme.title,
+      fontFamily: Fonts?.mono,
+      fontSize: 14,
+    },
+    saveButton: {
+      width: "100%",
+      borderRadius: 0,
+      borderWidth: 3,
+      borderColor: theme.panelBorder,
+      backgroundColor: theme.buttonDanger,
+      marginTop: 2,
+      shadowColor: theme.panelShadow,
+      shadowOpacity: 0.9,
+      shadowRadius: 0,
+      shadowOffset: { width: 3, height: 3 },
+      elevation: 6,
+    },
+    buttonText: {
+      fontFamily: Fonts?.mono,
+      fontSize: 13,
+      letterSpacing: 0.8,
+      textTransform: "uppercase",
+      color: theme.buttonText,
+    },
+    hintText: {
+      marginTop: 8,
+      fontFamily: Fonts?.mono,
+      color: theme.subtitle,
+      opacity: 0.9,
+    },
+    pixelDotTopLeft: {
+      position: "absolute",
+      width: 8,
+      height: 8,
+      top: -3,
+      left: -3,
+      backgroundColor: theme.pixelDot,
+    },
+    pixelDotTopRight: {
+      position: "absolute",
+      width: 8,
+      height: 8,
+      top: -3,
+      right: -3,
+      backgroundColor: theme.pixelDot,
+    },
+  });
+}
