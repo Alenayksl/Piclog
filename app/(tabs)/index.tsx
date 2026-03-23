@@ -1,15 +1,16 @@
-import { Image } from "expo-image";
-import { router, useFocusEffect } from "expo-router";
-import { useCallback, useState } from "react";
-import { FlatList, StyleSheet, View } from "react-native";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
+import { Fonts } from "@/constants/theme";
 import { LogCard } from "@/src/components/LogCard";
 import { useI18n } from "@/src/i18n/app-i18n";
 import { reverseGeocode } from "@/src/services/location";
 import { supabase } from "@/src/services/supabase";
 import { getWeather } from "@/src/services/weather";
 import { usePixelTheme, type PixelTheme } from "@/src/theme/pixel-theme";
+import { Image } from "expo-image";
+import { router, useFocusEffect } from "expo-router";
+import { useCallback, useState } from "react";
+import { FlatList, StyleSheet, View } from "react-native";
 
 type LogItem = {
   id: string;
@@ -172,6 +173,7 @@ export default function FeedScreen() {
         contentContainerStyle={styles.listContent}
         data={logs}
         keyExtractor={(item) => item.id}
+        showsVerticalScrollIndicator={false}
         onRefresh={fetchLogs}
         refreshing={loading}
         ListEmptyComponent={
@@ -224,6 +226,10 @@ function getStyles(theme: PixelTheme) {
     emptyText: {
       marginTop: 16,
       opacity: 0.7,
+      color: theme.subtitle,
+      fontFamily: Fonts?.mono,
+      letterSpacing: 0.6,
+      textAlign: "center",
     },
   });
 }
