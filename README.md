@@ -1,50 +1,178 @@
-# Welcome to your Expo app 👋
+# Piclog
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+Piclog is a pixel-style photo journal built with Expo and React Native.
 
-## Get started
+Users can create an account, capture or pick photos, add notes, and save memories with location and weather context. The app supports Turkish and English, plus two pixel themes (Kawaii Pink and Dark Purple).
 
-1. Install dependencies
+## Features
 
-   ```bash
-   npm install
-   ```
+- Email/password authentication with Supabase
+- Register, login, resend confirmation email, and forgot-password flow
+- Create posts by camera or gallery selection
+- Attach note, current location, and weather info to each post
+- Feed screen with signed image URLs from Supabase Storage
+- Memory detail screen with delete action
+- Account deletion flow (including data and storage cleanup)
+- Pixel UI theme toggle: pink or purple
+- Language switch: Turkish and English
 
-2. Start the app
+## Tech Stack
 
-   ```bash
-   npx expo start
-   ```
+- Expo SDK 54
+- React Native 0.81 + React 19
+- Expo Router (file-based routing)
+- Supabase (Auth, Database, Storage)
+- TypeScript
+- AsyncStorage for local preferences
 
-In the output, you'll find options to open the app in a
+## Project Structure
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+Key folders:
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+- app: Routes and screens (auth, tabs, detail)
+- src/services: Supabase, weather, geocoding services
+- src/hooks: auth and location hooks
+- src/i18n: in-app translations and language state
+- src/theme: pixel theme provider and palette
+- src/components: reusable UI components
 
-## Get a fresh project
+## Prerequisites
 
-When you're ready, run:
+- Node.js 18+
+- npm
+- Expo-compatible device/emulator
+- A Supabase project
+- OpenWeatherMap API key
 
-```bash
-npm run reset-project
+## Environment Variables
+
+Create a .env file in the project root and add:
+
+```env
+EXPO_PUBLIC_SUPABASE_URL=your_supabase_project_url
+EXPO_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+EXPO_PUBLIC_OPENWEATHER_API_KEY=your_openweather_api_key
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+Notes:
 
-## Learn more
+- EXPO*PUBLIC*\* variables are exposed to the client app by Expo.
+- If weather key is missing, weather data is skipped gracefully.
 
-To learn more about developing your project with Expo, look at the following resources:
+## Supabase Setup
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+Run the SQL script in Supabase SQL Editor:
 
-## Join the community
+- supabase-profiles.sql
 
-Join our community of developers creating universal apps.
+This script sets up:
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+- profiles table + RLS policies
+- trigger to create profile rows on sign-up
+- delete_my_account RPC function
+- photos storage bucket + storage policies scoped to each user folder
+
+Expected app tables used in code:
+
+- logs
+- profiles
+
+The app stores uploaded images in the photos bucket under this path pattern:
+
+- {user_id}/{timestamp}.{ext}
+
+## Install and Run
+
+1. Install dependencies:
+
+```bash
+npm install
+```
+
+2. Start development server:
+
+```bash
+npm run start
+```
+
+3. Run on specific targets:
+
+```bash
+npm run android
+npm run ios
+npm run web
+```
+
+## Available Scripts
+
+- npm run start: Start Expo dev server
+- npm run android: Open Android target
+- npm run ios: Open iOS target
+- npm run web: Open web target
+- npm run lint: Run Expo lint checks
+
+## Auth and Routing Overview
+
+- app/(auth): login, register, forgot-password screens
+- app/(tabs): authenticated feed, create, settings
+- app/detail/[id]: memory detail screen
+
+Tabs and detail flows are protected by auth checks in layout/screen logic.
+
+## Screenshots
+
+App screenshots are shown below:
+
+### Auth
+
+![Sign In](assets/screenshots/piclogsignin.jpeg)
+![Sign Up](assets/screenshots/piclogsignup.jpeg)
+![Forgot Password](assets/screenshots/piclogforgotpassword.jpeg)
+
+### Feed
+
+![Feed](assets/screenshots/piclogfeed.jpeg)
+![Feed Dark + Turkish](assets/screenshots/piclogfeeddarkandturkish.jpeg)
+
+### Create
+
+![Add Photo](assets/screenshots/piclogaddphoto.jpeg)
+![Add Photo Dark + Turkish](assets/screenshots/piclogaddphotodarkandturkish.jpeg)
+
+### Settings
+
+![Settings](assets/screenshots/piclogsettings.jpeg)
+![Settings Dark + Turkish](assets/screenshots/piclogsettingsdarkandturkish.jpeg)
+
+## Location and Weather
+
+- Location is retrieved via expo-location.
+- Reverse geocoding uses OpenStreetMap Nominatim.
+- Weather uses OpenWeatherMap current weather endpoint.
+- Localized responses are requested in Turkish or English based on current app language.
+
+## Internationalization and Theme
+
+- Language options: tr, en
+- Theme modes: pink, purple
+- Both language and theme are persisted in AsyncStorage
+
+## Troubleshooting
+
+- Login/Register works but data actions fail:
+  - Verify Supabase URL and anon key in .env
+  - Ensure SQL setup and policies are applied
+- Photos do not appear:
+  - Check photos bucket exists
+  - Confirm storage policies allow user folder access
+- Account deletion fails:
+  - Ensure delete_my_account function exists
+  - Confirm storage delete policy is active
+- Weather info missing:
+  - Check EXPO_PUBLIC_OPENWEATHER_API_KEY
+
+## Linting
+
+```bash
+npm run lint
+```
